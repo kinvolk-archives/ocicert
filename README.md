@@ -1,4 +1,10 @@
-# ocicert: a tool for doing OCI certfication
+# ocicert: a test framework for OCI distribution certification
 
-Do OCI distribution certifications.
+A simple test framework for doing OCI distribution certification.
+
+Run the tests like:
+
+```
+OCICERT_REGISTRY="docker.io/busybox:latest" make test
+```
 
