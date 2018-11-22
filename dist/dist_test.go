@@ -21,12 +21,16 @@ import (
 	"testing"
 
 	"github.com/kinvolk/ocicert/pkg/auth"
+	distp "github.com/kinvolk/ocicert/pkg/distp"
 	"github.com/kinvolk/ocicert/pkg/image"
 )
 
 var (
 	homeDir    string
 	regAuthCtx auth.RegAuthContext
+
+	testImageName string = "busybox"
+	testRefName   string = "latest"
 )
 
 func init() {
@@ -65,16 +69,17 @@ func TestCheckAPIVersion(t *testing.T) {
 	default:
 		t.Fatalf("statusCode = %v, request URL = %v", res.StatusCode, inputURL)
 	}
+
+	if vers := res.Header.Get(distp.DistAPIVersionKey); vers != distp.DistAPIVersionValue {
+		t.Fatalf("got an unexpected API version %v", vers)
+	}
 }
 
 func TestPullManifest(t *testing.T) {
-	imageName := "busybox"
-	refName := "latest"
-
 	indexServer := image.GetIndexName(image.DefaultIndexURLAuth)
 
-	remoteName := filepath.Join(image.DefaultRepoPrefix, imageName)
-	reqPath := filepath.Join(remoteName, "manifests", refName)
+	remoteName := filepath.Join(image.DefaultRepoPrefix, testImageName)
+	reqPath := filepath.Join(remoteName, "manifests", testRefName)
 
 	regAuthCtx = auth.NewRegAuthContext()
 	regAuthCtx.Scope.RemoteName = remoteName
@@ -106,13 +111,10 @@ func TestPullManifest(t *testing.T) {
 }
 
 func TestPushManifest(t *testing.T) {
-	imageName := "busybox"
-	refName := "latest"
-
 	indexServer := image.GetIndexName(image.DefaultIndexURLAuth)
 
-	remoteName := filepath.Join(image.DefaultRepoPrefix, imageName)
-	reqPath := filepath.Join(remoteName, "manifests", refName)
+	remoteName := filepath.Join(image.DefaultRepoPrefix, testImageName)
+	reqPath := filepath.Join(remoteName, "manifests", testRefName)
 
 	regAuthCtx = auth.NewRegAuthContext()
 	regAuthCtx.Scope.RemoteName = remoteName

@@ -25,6 +25,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	distp "github.com/kinvolk/ocicert/pkg/distp"
 )
 
 var (
@@ -184,6 +186,8 @@ func (sc *RegAuthContext) SendRequestWithToken(inputURL, method string, body io.
 		req.Header.Set("Authorization", "Bearer "+authToken)
 		setBearerHeader = true
 	}
+
+	req.Header.Set(distp.DistAPIVersionKey, "registry/2.0")
 
 	res, err := sc.Hclient.Do(req)
 	if err != nil {
