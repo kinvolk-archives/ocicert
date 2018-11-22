@@ -18,6 +18,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -76,7 +77,7 @@ func NewRegAuthContext() RegAuthContext {
 func (sc *RegAuthContext) PrepareAuth(indexServer string) error {
 	inputURL := "https://" + indexServer + "/v2/"
 
-	req, res, err := sc.SendRequestWithToken(inputURL, "GET")
+	req, res, err := sc.SendRequestWithToken(inputURL, "GET", nil)
 	if err != nil {
 		return fmt.Errorf("failed to send request to %s: %v", inputURL, err)
 	}
@@ -158,7 +159,7 @@ func (sc *RegAuthContext) getAuthToken(inputURL string) error {
 
 	sc.AuthTokens[sc.ReqHost] = tokenStruct.Token
 
-	if _, _, err := sc.SendRequestWithToken(inputURL, "GET"); err != nil {
+	if _, _, err := sc.SendRequestWithToken(inputURL, "GET", nil); err != nil {
 		return fmt.Errorf("failed to send request to %s: %v", inputURL, err)
 	}
 
@@ -170,7 +171,7 @@ func (sc *RegAuthContext) getAuthToken(inputURL string) error {
 //
 // $ curl -H "Authorization: Bearer TOKEN_STRING" https://index.docker.io/v2/library/busybox/manifests/latest
 //
-func (sc *RegAuthContext) SendRequestWithToken(inputURL, method string) (*http.Request, *http.Response, error) {
+func (sc *RegAuthContext) SendRequestWithToken(inputURL, method string, body io.Reader) (*http.Request, *http.Response, error) {
 	setBearerHeader := false
 
 	req, err := http.NewRequest(method, inputURL, nil)

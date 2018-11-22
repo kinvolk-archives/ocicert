@@ -48,7 +48,7 @@ func TestCheckAPIVersion(t *testing.T) {
 
 	inputURL := "https://" + indexServer + "/v2/" + reqPath
 
-	_, res, err := regAuthCtx.SendRequestWithToken(inputURL, "GET")
+	_, res, err := regAuthCtx.SendRequestWithToken(inputURL, "GET", nil)
 	if err != nil {
 		t.Fatalf("failed to send request with token to %s: %v", inputURL, err)
 	}
@@ -86,7 +86,7 @@ func TestPullManifest(t *testing.T) {
 
 	inputURL := "https://" + indexServer + "/v2/" + reqPath
 
-	_, res, err := regAuthCtx.SendRequestWithToken(inputURL, "GET")
+	_, res, err := regAuthCtx.SendRequestWithToken(inputURL, "GET", nil)
 	if err != nil {
 		t.Fatalf("failed to send request with token to %s: %v", inputURL, err)
 	}
@@ -124,7 +124,7 @@ func TestPushManifest(t *testing.T) {
 
 	inputURL := "https://" + indexServer + "/v2/" + reqPath
 
-	_, res, err := regAuthCtx.SendRequestWithToken(inputURL, "PUT")
+	_, res, err := regAuthCtx.SendRequestWithToken(inputURL, "PUT", nil)
 	if err != nil {
 		t.Fatalf("failed to send request with token to %s: %v", inputURL, err)
 	}
