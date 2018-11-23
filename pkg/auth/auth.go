@@ -202,6 +202,32 @@ func (sc *RegAuthContext) SendRequestWithToken(inputURL, method string, body io.
 	return req, res, nil
 }
 
+// GetResponse sends an HTTP request with the given method, URL, and blob (optional).
+// The parammeter acceptedStatus is a list of valid HTTP status codes expected,
+// e.g., http.StatusOK. If the actual response does not have any status code in
+// acceptedStatus, then it returns error.
+func (sc *RegAuthContext) GetResponse(inputURL, method string, blobStream io.Reader, acceptedStatus []int) (*http.Response, error) {
+	_, res, err := sc.SendRequestWithToken(inputURL, method, blobStream)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request with token to %s: %v", inputURL, err)
+	}
+
+	isInAccepted := func(keyStatus int, accptedStatus []int) bool {
+		for _, a := range acceptedStatus {
+			if a == keyStatus {
+				return true
+			}
+		}
+		return false
+	}
+
+	if !isInAccepted(res.StatusCode, acceptedStatus) {
+		return nil, fmt.Errorf("got an unexpected reply from %s: %v", inputURL, res.StatusCode)
+	}
+
+	return res, nil
+}
+
 func newHTTPClient() *http.Client {
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,
