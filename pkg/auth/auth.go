@@ -30,12 +30,13 @@ import (
 )
 
 var (
-	defaultScopeAccess        = "pull"
-	defaultRegURL      string = "docker.io/busybox:latest"
+	defaultScopeAccess string = "pull"
+	DefaultRepoPrefix  string = "library/"
 
-	DefaultIndexURLPlain = "registry-1.docker.io"
-	DefaultIndexURLAuth  = "index.docker.io"
-	DefaultRepoPrefix    = "library/"
+	defaultRegURL        string = "docker.io/busybox:latest"
+	DefaultIndexURLPlain string = "registry-1.docker.io"
+	dockerHostname       string = "docker.io"
+	dockerV1Hostname     string = "index.docker.io"
 )
 
 type AuthScope struct {
@@ -282,4 +283,15 @@ func SplitReposName(name string) (indexName, remoteName string) {
 		remoteName = DefaultRepoPrefix + remoteName
 	}
 	return
+}
+
+func GetIndexServer(inputURL string) string {
+	indexServer := GetIndexName(inputURL)
+	// we should use v1 hostname index.docker.io, because docker.io disabled
+	// numerous endpoints.
+	if indexServer == dockerHostname {
+		indexServer = dockerV1Hostname
+	}
+
+	return indexServer
 }

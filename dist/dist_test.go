@@ -30,20 +30,23 @@ var (
 
 	testImageName string = "busybox"
 	testRefName   string = "latest"
+	regURL        string
 )
 
 func init() {
 	homeDir = os.Getenv("HOME")
+
+	regURL = regAuthCtx.RegURL
 }
 
 func TestCheckAPIVersion(t *testing.T) {
 	reqPath := ""
 
-	indexServer := auth.GetIndexName(auth.DefaultIndexURLAuth)
-
-	regAuthCtx = auth.NewRegAuthContext()
+	regAuthCtx := auth.NewRegAuthContext()
 	regAuthCtx.Scope.RemoteName = reqPath
 	regAuthCtx.Scope.Actions = "pull"
+
+	indexServer := auth.GetIndexServer(regURL)
 
 	if err := regAuthCtx.PrepareAuth(indexServer); err != nil {
 		t.Fatalf("failed to prepare auth to %s for %s: %v", indexServer, reqPath, err)
@@ -62,12 +65,12 @@ func TestCheckAPIVersion(t *testing.T) {
 }
 
 func TestPullManifest(t *testing.T) {
-	indexServer := auth.GetIndexName(auth.DefaultIndexURLAuth)
+	indexServer := auth.GetIndexServer(regURL)
 
 	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
 	reqPath := filepath.Join(remoteName, "manifests", testRefName)
 
-	regAuthCtx = auth.NewRegAuthContext()
+	regAuthCtx := auth.NewRegAuthContext()
 	regAuthCtx.Scope.RemoteName = remoteName
 	regAuthCtx.Scope.Actions = "pull"
 
@@ -83,12 +86,12 @@ func TestPullManifest(t *testing.T) {
 }
 
 func TestPushManifest(t *testing.T) {
-	indexServer := auth.GetIndexName(auth.DefaultIndexURLAuth)
+	indexServer := auth.GetIndexServer(regURL)
 
 	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
 	reqPath := filepath.Join(remoteName, "manifests", testRefName)
 
-	regAuthCtx = auth.NewRegAuthContext()
+	regAuthCtx := auth.NewRegAuthContext()
 	regAuthCtx.Scope.RemoteName = remoteName
 	regAuthCtx.Scope.Actions = "push"
 
