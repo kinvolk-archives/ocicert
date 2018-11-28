@@ -22,7 +22,6 @@ import (
 
 	"github.com/kinvolk/ocicert/pkg/auth"
 	distp "github.com/kinvolk/ocicert/pkg/distp"
-	"github.com/kinvolk/ocicert/pkg/image"
 )
 
 var (
@@ -40,7 +39,7 @@ func init() {
 func TestCheckAPIVersion(t *testing.T) {
 	reqPath := ""
 
-	indexServer := image.GetIndexName(image.DefaultIndexURLAuth)
+	indexServer := auth.GetIndexName(auth.DefaultIndexURLAuth)
 
 	regAuthCtx = auth.NewRegAuthContext()
 	regAuthCtx.Scope.RemoteName = reqPath
@@ -63,9 +62,9 @@ func TestCheckAPIVersion(t *testing.T) {
 }
 
 func TestPullManifest(t *testing.T) {
-	indexServer := image.GetIndexName(image.DefaultIndexURLAuth)
+	indexServer := auth.GetIndexName(auth.DefaultIndexURLAuth)
 
-	remoteName := filepath.Join(image.DefaultRepoPrefix, testImageName)
+	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
 	reqPath := filepath.Join(remoteName, "manifests", testRefName)
 
 	regAuthCtx = auth.NewRegAuthContext()
@@ -84,9 +83,9 @@ func TestPullManifest(t *testing.T) {
 }
 
 func TestPushManifest(t *testing.T) {
-	indexServer := image.GetIndexName(image.DefaultIndexURLAuth)
+	indexServer := auth.GetIndexName(auth.DefaultIndexURLAuth)
 
-	remoteName := filepath.Join(image.DefaultRepoPrefix, testImageName)
+	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
 	reqPath := filepath.Join(remoteName, "manifests", testRefName)
 
 	regAuthCtx = auth.NewRegAuthContext()
