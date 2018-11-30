@@ -18,17 +18,25 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	distp "github.com/kinvolk/ocicert/pkg/distp"
 )
 
 var (
-	defaultScopeAccess        = "pull"
-	defaultRegURL      string = "docker.io/busybox:latest"
+	defaultScopeAccess string = "pull"
+	DefaultRepoPrefix  string = "library/"
+
+	defaultRegURL        string = "docker.io/busybox:latest"
+	DefaultIndexURLPlain string = "registry-1.docker.io"
+	dockerHostname       string = "docker.io"
+	dockerV1Hostname     string = "index.docker.io"
 )
 
 type AuthScope struct {
@@ -76,7 +84,7 @@ func NewRegAuthContext() RegAuthContext {
 func (sc *RegAuthContext) PrepareAuth(indexServer string) error {
 	inputURL := "https://" + indexServer + "/v2/"
 
-	req, res, err := sc.SendRequestWithToken(inputURL, "GET")
+	req, res, err := sc.SendRequestWithToken(inputURL, "GET", nil)
 	if err != nil {
 		return fmt.Errorf("failed to send request to %s: %v", inputURL, err)
 	}
@@ -158,7 +166,7 @@ func (sc *RegAuthContext) getAuthToken(inputURL string) error {
 
 	sc.AuthTokens[sc.ReqHost] = tokenStruct.Token
 
-	if _, _, err := sc.SendRequestWithToken(inputURL, "GET"); err != nil {
+	if _, _, err := sc.SendRequestWithToken(inputURL, "GET", nil); err != nil {
 		return fmt.Errorf("failed to send request to %s: %v", inputURL, err)
 	}
 
@@ -170,7 +178,7 @@ func (sc *RegAuthContext) getAuthToken(inputURL string) error {
 //
 // $ curl -H "Authorization: Bearer TOKEN_STRING" https://index.docker.io/v2/library/busybox/manifests/latest
 //
-func (sc *RegAuthContext) SendRequestWithToken(inputURL, method string) (*http.Request, *http.Response, error) {
+func (sc *RegAuthContext) SendRequestWithToken(inputURL, method string, body io.Reader) (*http.Request, *http.Response, error) {
 	setBearerHeader := false
 
 	req, err := http.NewRequest(method, inputURL, nil)
@@ -184,6 +192,8 @@ func (sc *RegAuthContext) SendRequestWithToken(inputURL, method string) (*http.R
 		setBearerHeader = true
 	}
 
+	req.Header.Set(distp.DistAPIVersionKey, "registry/2.0")
+
 	res, err := sc.Hclient.Do(req)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to send auth request: %v", err)
@@ -195,6 +205,32 @@ func (sc *RegAuthContext) SendRequestWithToken(inputURL, method string) (*http.R
 	}
 
 	return req, res, nil
+}
+
+// GetResponse sends an HTTP request with the given method, URL, and blob (optional).
+// The parammeter acceptedStatus is a list of valid HTTP status codes expected,
+// e.g., http.StatusOK. If the actual response does not have any status code in
+// acceptedStatus, then it returns error.
+func (sc *RegAuthContext) GetResponse(inputURL, method string, blobStream io.Reader, acceptedStatus []int) (*http.Response, error) {
+	_, res, err := sc.SendRequestWithToken(inputURL, method, blobStream)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request with token to %s: %v", inputURL, err)
+	}
+
+	isInAccepted := func(keyStatus int, accptedStatus []int) bool {
+		for _, a := range acceptedStatus {
+			if a == keyStatus {
+				return true
+			}
+		}
+		return false
+	}
+
+	if !isInAccepted(res.StatusCode, acceptedStatus) {
+		return nil, fmt.Errorf("got an unexpected reply from %s: %v", inputURL, res.StatusCode)
+	}
+
+	return res, nil
 }
 
 func newHTTPClient() *http.Client {
@@ -227,4 +263,35 @@ func parseScope(inputScope string) AuthScope {
 	}
 
 	return outScope
+}
+
+// GetIndexName returns the index server from a registry URL.
+func GetIndexName(regURL string) string {
+	index, _ := SplitReposName(regURL)
+	return index
+}
+
+// SplitReposName breaks a repo name into an index name and remote name.
+func SplitReposName(name string) (indexName, remoteName string) {
+	i := strings.IndexRune(name, '/')
+	if i == -1 || (!strings.ContainsAny(name[:i], ".:") && name[:i] != "localhost") {
+		indexName, remoteName = DefaultIndexURLPlain, name
+	} else {
+		indexName, remoteName = name[:i], name[i+1:]
+	}
+	if indexName == DefaultIndexURLPlain && !strings.ContainsRune(remoteName, '/') {
+		remoteName = DefaultRepoPrefix + remoteName
+	}
+	return
+}
+
+func GetIndexServer(inputURL string) string {
+	indexServer := GetIndexName(inputURL)
+	// we should use v1 hostname index.docker.io, because docker.io disabled
+	// numerous endpoints.
+	if indexServer == dockerHostname {
+		indexServer = dockerV1Hostname
+	}
+
+	return indexServer
 }

@@ -21,26 +21,32 @@ import (
 	"testing"
 
 	"github.com/kinvolk/ocicert/pkg/auth"
-	"github.com/kinvolk/ocicert/pkg/image"
+	distp "github.com/kinvolk/ocicert/pkg/distp"
 )
 
 var (
 	homeDir    string
 	regAuthCtx auth.RegAuthContext
+
+	testImageName string = "busybox"
+	testRefName   string = "latest"
+	regURL        string
 )
 
 func init() {
 	homeDir = os.Getenv("HOME")
+
+	regURL = regAuthCtx.RegURL
 }
 
 func TestCheckAPIVersion(t *testing.T) {
 	reqPath := ""
 
-	indexServer := image.GetIndexName(image.DefaultIndexURLAuth)
-
-	regAuthCtx = auth.NewRegAuthContext()
+	regAuthCtx := auth.NewRegAuthContext()
 	regAuthCtx.Scope.RemoteName = reqPath
 	regAuthCtx.Scope.Actions = "pull"
+
+	indexServer := auth.GetIndexServer(regURL)
 
 	if err := regAuthCtx.PrepareAuth(indexServer); err != nil {
 		t.Fatalf("failed to prepare auth to %s for %s: %v", indexServer, reqPath, err)
@@ -48,35 +54,23 @@ func TestCheckAPIVersion(t *testing.T) {
 
 	inputURL := "https://" + indexServer + "/v2/" + reqPath
 
-	_, res, err := regAuthCtx.SendRequestWithToken(inputURL, "GET")
+	res, err := regAuthCtx.GetResponse(inputURL, "GET", nil, []int{http.StatusOK})
 	if err != nil {
-		t.Fatalf("failed to send request with token to %s: %v", inputURL, err)
+		t.Fatalf("got an unexpected reply: %v", err)
 	}
 
-	switch res.StatusCode {
-	case http.StatusCreated:
-		t.Fatalf("got an unexpected reply: 201 Created")
-	case http.StatusUnauthorized:
-		t.Fatalf("got an unexpected reply: 401 Unauthorized")
-	case http.StatusNotFound:
-		t.Fatalf("got an unexpected reply: 404 Not Found")
-	case http.StatusOK:
-		break
-	default:
-		t.Fatalf("statusCode = %v, request URL = %v", res.StatusCode, inputURL)
+	if vers := res.Header.Get(distp.DistAPIVersionKey); vers != distp.DistAPIVersionValue {
+		t.Fatalf("got an unexpected API version %v", vers)
 	}
 }
 
 func TestPullManifest(t *testing.T) {
-	imageName := "busybox"
-	refName := "latest"
+	indexServer := auth.GetIndexServer(regURL)
 
-	indexServer := image.GetIndexName(image.DefaultIndexURLAuth)
+	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
+	reqPath := filepath.Join(remoteName, "manifests", testRefName)
 
-	remoteName := filepath.Join(image.DefaultRepoPrefix, imageName)
-	reqPath := filepath.Join(remoteName, "manifests", refName)
-
-	regAuthCtx = auth.NewRegAuthContext()
+	regAuthCtx := auth.NewRegAuthContext()
 	regAuthCtx.Scope.RemoteName = remoteName
 	regAuthCtx.Scope.Actions = "pull"
 
@@ -86,35 +80,18 @@ func TestPullManifest(t *testing.T) {
 
 	inputURL := "https://" + indexServer + "/v2/" + reqPath
 
-	_, res, err := regAuthCtx.SendRequestWithToken(inputURL, "GET")
-	if err != nil {
-		t.Fatalf("failed to send request with token to %s: %v", inputURL, err)
-	}
-
-	switch res.StatusCode {
-	case http.StatusOK:
-		return
-	case http.StatusCreated:
-		fallthrough
-	case http.StatusUnauthorized:
-		fallthrough
-	case http.StatusNotFound:
-		t.Fatalf("got an unexpected reply: %v", res.StatusCode)
-	default:
-		t.Fatalf("statusCode = %v, request URL = %v", res.StatusCode, inputURL)
+	if _, err := regAuthCtx.GetResponse(inputURL, "GET", nil, []int{http.StatusOK}); err != nil {
+		t.Fatalf("got an unexpected reply: %v", err)
 	}
 }
 
 func TestPushManifest(t *testing.T) {
-	imageName := "busybox"
-	refName := "latest"
+	indexServer := auth.GetIndexServer(regURL)
 
-	indexServer := image.GetIndexName(image.DefaultIndexURLAuth)
+	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
+	reqPath := filepath.Join(remoteName, "manifests", testRefName)
 
-	remoteName := filepath.Join(image.DefaultRepoPrefix, imageName)
-	reqPath := filepath.Join(remoteName, "manifests", refName)
-
-	regAuthCtx = auth.NewRegAuthContext()
+	regAuthCtx := auth.NewRegAuthContext()
 	regAuthCtx.Scope.RemoteName = remoteName
 	regAuthCtx.Scope.Actions = "push"
 
@@ -124,21 +101,7 @@ func TestPushManifest(t *testing.T) {
 
 	inputURL := "https://" + indexServer + "/v2/" + reqPath
 
-	_, res, err := regAuthCtx.SendRequestWithToken(inputURL, "PUT")
-	if err != nil {
-		t.Fatalf("failed to send request with token to %s: %v", inputURL, err)
-	}
-
-	switch res.StatusCode {
-	case http.StatusOK:
-		return
-	case http.StatusCreated:
-		fallthrough
-	case http.StatusUnauthorized:
-		fallthrough
-	case http.StatusNotFound:
-		t.Fatalf("got an unexpected reply: %v", res.StatusCode)
-	default:
-		t.Fatalf("statusCode = %v, request URL = %v", res.StatusCode, inputURL)
+	if _, err := regAuthCtx.GetResponse(inputURL, "PUT", nil, []int{http.StatusOK}); err != nil {
+		t.Fatalf("got an unexpected reply: %v", err)
 	}
 }

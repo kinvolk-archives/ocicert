@@ -12,4 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package image
+package distp
+
+const (
+	DistAPIVersionKey   string = "Docker-Distribution-API-Version"
+	DistAPIVersionValue string = "registry/2.0"
+
+	UploadUuidKey string = "Docker-Upload-Uuid"
+)
