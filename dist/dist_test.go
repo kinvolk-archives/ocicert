@@ -105,3 +105,46 @@ func TestPushManifest(t *testing.T) {
 		t.Fatalf("got an unexpected reply: %v", err)
 	}
 }
+
+func TestListRepos(t *testing.T) {
+	reqPath := "catalog"
+
+	regAuthCtx.Scope.RemoteName = reqPath
+	regAuthCtx.Scope.Actions = "pull"
+
+	indexServer := auth.GetIndexServer(regURL)
+
+	// NOTE: it will fail when testing against docker.io, as '/v2/_catalog' endpoint
+	// will not be supported.
+	if err := regAuthCtx.PrepareAuth(indexServer); err != nil {
+		t.Fatalf("failed to prepare auth to %s for %s: %v", indexServer, reqPath, err)
+	}
+
+	inputURL := "https://" + indexServer + "/v2/" + reqPath
+
+	_, err := regAuthCtx.GetResponse(inputURL, "GET", nil, []int{http.StatusOK})
+	if err != nil {
+		t.Fatalf("got an unexpected reply: %v", err)
+	}
+}
+
+func TestListTags(t *testing.T) {
+	indexServer := auth.GetIndexServer(regURL)
+
+	regAuthCtx := auth.NewRegAuthContext()
+	remoteName := filepath.Join(auth.DefaultRepoPrefix, testImageName)
+	reqPath := filepath.Join(remoteName, "tags/list")
+
+	regAuthCtx.Scope.RemoteName = remoteName
+	regAuthCtx.Scope.Actions = "pull"
+
+	if err := regAuthCtx.PrepareAuth(indexServer); err != nil {
+		t.Fatalf("failed to prepare auth to %s for %s: %v", indexServer, reqPath, err)
+	}
+
+	inputURL := "https://" + indexServer + "/v2/" + reqPath
+
+	if _, err := regAuthCtx.GetResponse(inputURL, "GET", nil, []int{http.StatusOK}); err != nil {
+		t.Fatalf("got an unexpected reply: %v", err)
+	}
+}
